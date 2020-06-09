@@ -1,0 +1,98 @@
+---
+title: "Screening Task"
+author: "Balaji Ganesh Anantharaman"
+date: "8 June 2020"
+output: html_document
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, fig.align = "center")
+```
+
+## Installing Required Packages
+
+I used three external packages - data.table for reading in the data, ggplot2 and pheatmap for plotting different graphs
+
+```{r packages, echo=TRUE, message=FALSE}
+
+install.packages("data.table", repo="https://ftp.osuosl.org/pub/cran/", quiet = TRUE)
+install.packages("ggplot2",repo="https://ftp.osuosl.org/pub/cran/", quiet = TRUE)
+install.packages("pheatmap",repo="https://ftp.osuosl.org/pub/cran/", quiet = TRUE)
+install.packages("pheatmap", repo="https://ftp.osuosl.org/pub/cran/", quiet = TRUE)
+library(data.table)
+library(pheatmap)
+library(ggplot2)
+library(knitr)
+```
+
+## Reading the Data
+
+```{r data, echo=TRUE}
+basedir <- "C:/Users/Balaji Ganesh/OneDrive/Documents/Job Applications/Agendia/"
+df <- fread(file.path(basedir, "Screening_Dataset.csv"))
+knitr::kable(head(df), caption = "Dataset")
+```
+
+## Task One - Plot the relationship between the first two columns
+
+```{r task1, echo=TRUE}
+one_two <- ggplot(data=df, mapping = aes(x=Var1, y=Var2)) + geom_point(aes(size = 2)) + labs(x = "Var1", y="Var2") + ggtitle("Plot between Variable 1 and 2") + theme(plot.title = element_text(hjust=0.5))
+one_two + scale_size(guide='none')
+```
+
+##Task Two  - Pearson Correlation between the first two columns
+
+`"complete.obs"` - One way of working around Nan values. Corresponsing elements from both arrays are not used to calculate the correlation.
+
+
+```{r task2, echo = TRUE}
+correlation_1_2 <- cor(df$Var1, df$Var2, use="complete.obs")
+cat(correlation_1_2)
+```
+
+##Task Three - Pearson Correlation between the second and third column
+
+```{r task3, echo = TRUE}
+correlation_2_3 <- cor(df$Var2, df$Var3, use="complete.obs")
+cat(correlation_2_3)
+```
+
+##Task Four and Five - Which Columns are most related
+
+Pearson Correlation is calculated between different pairs of columns. The values are stored in a symmetric matrix where A~i~~j~ is the correlation between the i^th^ and j^th^ columns. A heatmap is plotted to represent this matrix - A Red Cell indicates positive correlation and a Blue Cell indicates negative correlation between the corresponding columns. Higher the intensity,stronger the correlation.
+
+The first and sixth columns seem to be the most correlated.
+
+```{r task4, echo = TRUE}
+cor_matrix <- cor(df, use="complete.obs")
+pheatmap(cor_matrix, show_rownames = TRUE, show_colnames = TRUE, cluster_rows = FALSE, cluster_cols = FALSE, display_numbers = TRUE, fontsize = 15)
+
+```
+
+##Task Six - Equation of Best Fit
+
+Linear regression between the two highly correlated columns would give us the required equation. 
+
+```{r task 6, echo = TRUE}
+lm_16 <- lm(Var1 ~ Var6, df)
+```
+
+We need to ensure that the major assumptions for linear regressions are met.
+
+```{r task 6 part two}
+plot(lm_16, which = 1, main = "Heteroscedasticity")
+```
+```{r task 6 part three}
+plot(lm_16, which = 2, main = "QQ plot for checking Normality of data")
+```
+We see that the residuals do seem to have a constant variance. We also see from the qq-plot that the dependent variable follows the normal distribution. 
+
+##Task Seven - Plot of the equation
+
+```{r task 7}
+equation <- paste0("Var6 = ", lm_16$coefficients[2],"*","Var1 ","+"," ",lm_16$coefficients[1])
+one_six <- ggplot(data  = df, aes(Var1, Var6)) + geom_point(aes(size = 2)) + geom_smooth(method='lm') + annotate("text", x = 0.6, y = 0, label = equation) + annotate("text", x = 0.6, y = -0.05, label = paste0("Pearson_Correlation = ", cor_matrix[1,6]))
+one_six + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),plot.title = element_text(hjust = 0.5),text = element_text(size = 20)) +  scale_size(guide='none')+ggtitle("Plot between variable 1 and variable 6")
+```
